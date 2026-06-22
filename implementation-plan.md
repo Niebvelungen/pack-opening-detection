@@ -8,17 +8,25 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 
 ---
 
-## Phase 0 — Project scaffolding  ✳ *do first*
+## Phase 0 — Project scaffolding  ✳ *do first*  ✅ DONE
 
 - [x] `README.md`, `CLAUDE.md`, `.gitignore`
-- [ ] `pyproject.toml` — package `pack_config_miner`, Python 3.12+, deps split into core /
-      `vision` / `cv` / `dev` extras. Console script `pack-miner = pack_config_miner.cli:app`.
-- [ ] Source tree per [plan.md](plan.md) §9: `contracts/`, `pipeline/` (with `identify/`),
-      `templates/`, `tests/`; create `data/` and `out/` with `.gitkeep`.
-- [ ] Dev tooling config: `ruff` (lint+format), `mypy` (strict on `contracts/`), `pytest`.
-- [ ] CI stub (optional): GitHub Actions running `ruff` + `pytest` on push.
+- [x] `pyproject.toml` — package `pack_config_miner` (hatchling), Python 3.12+, deps split into
+      core / `vision` / `media` / `cv` / `all` / `dev` extras. Console script
+      `pack-miner = pack_config_miner.cli:app`.
+- [x] Source tree under a **`src/` layout** (`src/pack_config_miner/`): the [plan.md](plan.md) §9
+      `contracts/` and `pipeline/` (with `identify/`) live under the package namespace so the
+      console script resolves; `templates/`, `tests/`, `data/`, `out/` stay at repo root with
+      `.gitkeep` (and `.gitignore` keeps the dirs but ignores their contents).
+- [x] Dev tooling config (in `pyproject.toml`): `ruff` (lint+format), `mypy` (strict override on
+      `contracts/`, `py.typed` marker shipped), `pytest` + `pytest-cov`.
+- [x] CI stub: `.github/workflows/ci.yml` runs ruff check + ruff format --check + mypy + pytest.
+- [x] Smoke tests (`tests/test_smoke.py`): import + CLI version/help.
 
-**Exit:** `pip install -e ".[dev]"` succeeds; `pack-miner --help` prints; `pytest` runs (0 tests OK).
+**Exit met:** `pip install -e ".[dev]"` succeeds; `pack-miner --help` prints; ruff/mypy/pytest all green.
+
+> Note: built/verified on Python **3.13** locally (satisfies `>=3.12`). Source kept ASCII-only so
+> `rich`/`typer` help renders on the Windows cp1252 console.
 
 ---
 

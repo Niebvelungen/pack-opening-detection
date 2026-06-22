@@ -28,10 +28,13 @@ htmlcov/
 .hypothesis/
 
 # --- Project data & outputs (large / generated / secret) ---
+# Keep the dirs (via .gitkeep) but ignore their contents.
 # Downloaded media and working catalog/manifests — see plan.md §9
-data/
+data/*
+!data/.gitkeep
 # Derived configs + confidence reports
-out/
+out/*
+!out/.gitkeep
 # Extracted frames / scratch
 .cache/
 *.tmp
