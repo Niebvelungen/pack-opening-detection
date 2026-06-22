@@ -1,0 +1,18 @@
+{
+  "packImage": "",
+  "slots": ["C", "C", "C", "C", "C", "C", "BS", "R-SR-MR", "FOIL"],
+  "BS": [
+    { "chance": 100, "rarity": "C", "conditions": [{ "equals": true, "type": "Magic Stone" }] }
+  ],
+  "R-SR-MR": [
+    { "chance": 63, "rarity": "R" },
+    { "chance": 25, "rarity": "SR" },
+    { "chance": 12, "rarity": "MR" }
+  ],
+  "FOIL": [
+    { "chance": 38, "rarity": "R", "conditions": [{ "equals": false, "type": "Ruler" }] },
+    { "chance": 25, "rarity": "MR" },
+    { "chance": 25, "rarity": "SR" },
+    { "chance": 12, "rarity": "R", "conditions": [{ "equals": true, "type": "Ruler" }] }
+  ]
+}

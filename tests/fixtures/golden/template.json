@@ -1,0 +1,17 @@
+{
+  "setCode": "GLD",
+  "packSize": 9,
+  "layout": [
+    { "slot": "C", "kind": "fixed", "count": 6 },
+    { "slot": "BS", "kind": "lottery", "count": 1, "distinguish": ["Magic Stone"] },
+    { "slot": "R-SR-MR", "kind": "lottery", "count": 1, "distinguish": ["Ruler"] },
+    { "slot": "FOIL", "kind": "lottery", "count": 1, "distinguish": ["Ruler"] }
+  ],
+  "attribution": {
+    "rules": [
+      { "slot": "FOIL", "match": { "isFoil": true } },
+      { "slot": "BS", "match": { "anyType": ["Magic Stone"] } },
+      { "slot": "R-SR-MR", "match": { "rarityIn": ["R", "SR", "MR"] } }
+    ]
+  }
+}

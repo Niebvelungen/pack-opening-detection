@@ -57,9 +57,12 @@ The printed `SET-NUMBER` id is legible on the scans (Tier 1 OCR premise holds).
 ## Tech stack & conventions
 
 - **Python 3.12+**, `pydantic` v2, `typer` CLI, `pytest` + recorded fixtures.
-- Vision sits behind a provider-agnostic `identify(frame) -> Detection[]` interface
-  (`pipeline/identify/base.py`) so Tier 1 (vision-LLM) ↔ Tier 2 (local CV) is a swap.
-  No stage knows the concrete model.
+- Identification sits behind a provider-agnostic `identify(frame) -> Detection[]` interface
+  (`pipeline/identify/base.py`). **Tier 2 (local CV art match) is now the primary/default**
+  (`--tier cv`); Tier 1 (vision-LLM) is optional (`--tier vision`); `hybrid` runs Tier 2 then
+  escalates unmatched frames (foils) to Tier 1. Measured: Tier 1 recall on uncontrolled footage
+  was insufficient (and Sonnet hallucinated ids), so M7 Tier 2 was built and promoted. No stage
+  knows the concrete model.
 - **LLM provider:** default to the latest Claude models (Opus 4.8 / Sonnet 4.6) via the
   Anthropic API. Before writing or changing any vision-LLM / Anthropic client code, consult the
   `claude-api` skill for current model IDs, pricing, and the vision/tool-use API — do not rely
@@ -74,8 +77,9 @@ The printed `SET-NUMBER` id is legible on the scans (Tier 1 OCR premise holds).
 
 ## Working norms
 
-- **Vertical slice first.** Prove M0→M5 on one controlled set before scaling breadth (Tier 2,
-  uncontrolled footage). Don't build Tier 2 until Tier 1 recall is measured and insufficient.
+- **Vertical slice first** (history): M0→M5 was proven on a synthetic golden set, then breadth
+  followed. Tier 2 was built once Tier 1 recall on real uncontrolled footage was measured as
+  insufficient — that gate is now passed; Tier 2 is the default identifier.
 - **Flag, don't drop.** Packs failing template validation, low-confidence IDs, and
   under-sampled slots go to a review queue — never silently discarded.
 - Run tests with `pytest`. Validate contracts at every stage boundary.

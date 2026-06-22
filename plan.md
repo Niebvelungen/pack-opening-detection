@@ -153,10 +153,13 @@ recognise which physical card fills each lottery slot.
   "packSize": 9,
   "layout": [
     { "slot": "C",        "kind": "fixed",   "count": 6 },   // emitted as bare-rarity slots
-    { "slot": "BS",       "kind": "lottery", "count": 1 },
+    { "slot": "BS",       "kind": "lottery", "count": 1, "distinguish": ["Magic Stone"] },
     { "slot": "R-SR-MR",  "kind": "lottery", "count": 1 },
-    { "slot": "FOIL",     "kind": "lottery", "count": 1 }
+    { "slot": "FOIL",     "kind": "lottery", "count": 1, "distinguish": ["Ruler", "J-Ruler"] }
   ],
+  // `distinguish` (optional, lottery slots): the card types that split this slot's outcomes
+  // (§5). A card with one of these types is a distinct outcome from one without; a single-type
+  // list like ["Magic Stone"] also restricts the slot's pool to that type. Omit for rarity-only.
   "attribution": {
     // How to assign an identified card in a pack to a lottery slot.
     // Evaluated top-to-bottom; first match wins. Remaining cards fall to fixed slots.

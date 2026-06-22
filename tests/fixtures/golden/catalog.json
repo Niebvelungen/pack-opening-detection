@@ -1,0 +1,25 @@
+{
+  "fow": {
+    "clusters": [
+      {
+        "name": "Golden",
+        "sets": [
+          {
+            "name": "Golden Sample Set",
+            "code": "GLD",
+            "cards": [
+              { "id": "GLD-001", "name": "Common Alpha", "type": ["Resonator"], "race": ["Human"], "colour": ["W"], "ATK": 300, "DEF": 300, "rarity": "C" },
+              { "id": "GLD-002", "name": "Common Beta", "type": ["Resonator"], "race": ["Human"], "colour": ["W"], "ATK": 400, "DEF": 200, "rarity": "C" },
+              { "id": "GLD-003", "name": "Common Gamma", "type": ["Resonator"], "race": ["Human"], "colour": ["R"], "ATK": 500, "DEF": 100, "rarity": "C" },
+              { "id": "GLD-010", "name": "Golden Stone", "type": ["Magic Stone"], "race": [], "colour": ["W"], "ATK": "", "DEF": "", "rarity": "C" },
+              { "id": "GLD-020", "name": "Rare Resonator", "type": ["Resonator"], "race": ["Beast"], "colour": ["R"], "ATK": 800, "DEF": 700, "rarity": "R" },
+              { "id": "GLD-021", "name": "Rare Ruler", "type": ["Ruler"], "race": ["Human"], "colour": ["R"], "ATK": "", "DEF": "", "rarity": "R" },
+              { "id": "GLD-022", "name": "Super Rare One", "type": ["Resonator"], "race": ["Beast"], "colour": ["U"], "ATK": 900, "DEF": 900, "rarity": "SR" },
+              { "id": "GLD-023", "name": "Mega Rare One", "type": ["Resonator"], "race": ["Dragon"], "colour": ["B"], "ATK": 1200, "DEF": 1000, "rarity": "MR" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

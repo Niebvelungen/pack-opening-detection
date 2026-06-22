@@ -1,0 +1,16 @@
+{
+  "setCode": "JRV",
+  "packSize": 10,
+  "layout": [
+    { "slot": "N", "kind": "fixed", "count": 7 },
+    { "slot": "R", "kind": "fixed", "count": 1 },
+    { "slot": "RARE", "kind": "lottery", "count": 1 },
+    { "slot": "FOIL", "kind": "lottery", "count": 1 }
+  ],
+  "attribution": {
+    "rules": [
+      { "slot": "FOIL", "match": { "isFoil": true } },
+      { "slot": "RARE", "match": { "rarityIn": ["R", "SR", "MR", "XR"] } }
+    ]
+  }
+}

@@ -15,11 +15,18 @@ SlotKind = Literal["fixed", "lottery"]
 
 
 class SlotDef(BaseModel):
-    """One slot in the pack layout. ``count`` cards fill this slot per pack."""
+    """One slot in the pack layout. ``count`` cards fill this slot per pack.
+
+    ``distinguish`` lists the card types that *split* this lottery slot's outcomes (plan.md
+    section 5): e.g. ``["Ruler"]`` makes a Ruler card a distinct outcome from a non-Ruler of the
+    same rarity, and ``["Magic Stone"]`` restricts the slot's pool to magic stones. Empty (the
+    default) means outcomes are keyed by rarity alone. Ignored for ``fixed`` slots.
+    """
 
     slot: str
     kind: SlotKind
     count: int = 1
+    distinguish: list[str] = Field(default_factory=list)
 
 
 class MatchPredicate(BaseModel):

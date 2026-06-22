@@ -59,99 +59,213 @@ ruff + mypy + 11 pytest all green.
 
 ---
 
-## M1 — Ingest + frame sampling
+## M1 — Ingest + frame sampling  ✅ DONE
 
-- [ ] `pipeline/ingest.py` ([1]) — resolve a `FootageSource`: `yt-dlp` for remote URLs, passthrough
-      for local paths; normalise container/fps; cache under `data/`.
-- [ ] `pipeline/frames.py` ([2]) — scene-change keyframe extraction (`ffmpeg` CLI or `PyAV`);
-      dedupe near-identical frames; emit candidate frames with timestamps.
-- [ ] Make the vision/heavy deps optional so M0 tests don't require `ffmpeg`/`yt-dlp` installed.
-- [ ] Tests: a short local fixture clip → expected keyframe count (±tolerance).
+- [x] `pipeline/ingest.py` ([1]) — `load_manifest`, `is_remote`, `ingest_source`/`ingest_manifest`
+      → `MediaClip` (frozen dataclass: source id, set, capture, local path). `yt-dlp` for remote
+      URLs (lazy import, cached under `data/media` as `<id>.<ext>`), passthrough + existence check
+      for local paths. Container/fps normalisation is deferred to the decoder (PyAV reads any
+      container; the sampler controls effective fps), so ingest only lands a readable file.
+- [x] `pipeline/frames.py` ([2]) — **pure** `select_keyframe_indices` (scene-change + dedup in one
+      pass: keep a frame only when it differs from the last kept frame by ≥ `threshold`, rate-limited
+      by `min_gap`) over cheap per-frame `frame_signature` fingerprints; `iter_decoded_frames`
+      (PyAV) + `sample_keyframes` orchestrate decode → select → save PNGs, emitting `CandidateFrame`
+      records (ordinal, frame index, timestamp, path).
+- [x] Heavy deps stay optional: `yt-dlp`/`av`/`numpy`/`pillow` in the `media` extra, all imported
+      lazily; M0 core tests need none of them. mypy override ignores their missing stubs.
+- [x] CLI: `pack-miner ingest` and `pack-miner sample-frames` wire [1]/[1]+[2] for manual runs.
+- [x] Tests (`tests/test_ingest.py`, `tests/test_frames.py`): manifest round-trip, remote/local
+      split, local passthrough + missing-file; pure selection logic (first-frame baseline,
+      threshold density, `min_gap`, scene-change vs dedup) tested decoder-free; `numpy`/PyAV/Pillow
+      paths `importorskip`-guarded, incl. an end-to-end synthetic 3-scene clip → 3 deduped keyframes.
 
-**Exit:** manifest → keyframes for one controlled clip.
+**Exit met:** manifest → keyframes for one (synthetic) controlled clip; ruff + mypy + 30 pytest green.
 
----
-
-## M2 — Vision identify (Tier 1)
-
-> Before writing the Anthropic client, consult the `claude-api` skill for current model IDs,
-> the vision API shape, and pricing. Default to the latest Claude model.
-
-- [ ] `pipeline/identify/base.py` — `Detection` dataclass + `Identifier` protocol
-      (`identify(frame) -> list[Detection]`). This interface is the Tier 1 ↔ Tier 2 seam.
-- [ ] `pipeline/identify/vision_llm.py` — Claude vision client behind `Identifier`.
-      Prompt: enumerate every card; return printed `SET-NUMBER` if legible else visible name;
-      flag holo/foil; bbox + self-reported confidence. Structured (JSON/tool-use) output.
-- [ ] Config: API key via env (`.env`, gitignored); model id configurable; retry/backoff.
-- [ ] Tests: a recorded fixture (frame → canned response) so tests don't hit the network.
-
-**Exit:** frames → detections with IDs/foil flags on a sample clip.
+> Note: this dev box had no Python ≥3.12 (only pyenv 3.7/3.9); installed CPython **3.13** via winget
+> and built a `.venv` (gitignored). Suite verified on 3.13 with the `media` extra installed.
 
 ---
 
-## M3 — Resolve
+## M2 — Vision identify (Tier 1)  ✅ DONE
 
-- [ ] `pipeline/resolve.py` ([4]) — map each `Detection` → `cardId`:
-      (1) exact ID hit in `CatalogIndex.byId`; (2) else `rapidfuzz` name match **constrained to
-      the source's `setCode`**; (3) else mark unresolved. Attach rarity/types/races from index.
-- [ ] Track and report the unresolved rate.
-- [ ] Tests: exact-hit, fuzzy-hit (typo), and unresolved cases.
+> Consulted the `claude-api` skill before writing the client (per CLAUDE.md): model
+> `claude-opus-4-8`, base64 image content blocks, structured output via `output_config.format`,
+> SDK-managed retry/backoff, `ANTHROPIC_API_KEY` resolved from env.
 
-**Exit:** detections → `cardId` + metadata; unresolved rate measured.
+- [x] `pipeline/identify/base.py` — `BBox` + `Detection` (frozen dataclasses: `sourceId`,
+      `frameOrdinal`, nullable `cardId`/`name`/`isFoil`/`bbox`, `confidence`) + `runtime_checkable`
+      `Identifier` protocol (`identify(frame) -> list[Detection]`) — the Tier 1 ↔ Tier 2 seam.
+- [x] `pipeline/identify/vision_llm.py` — `VisionLLMIdentifier` behind `Identifier`. Prompt
+      enumerates every card → printed `SET-NUMBER` if legible (suffixes preserved) else visible
+      name; holo/foil flag; normalised bbox; self-reported confidence. **Structured output**
+      (`output_config.format` json_schema, all-required + `additionalProperties:false`, nullable
+      via union types). `anthropic` lazy-imported (`vision` extra); refusal `stop_reason` guarded.
+- [x] Config: `VisionConfig` (model id, `max_tokens`, `effort`, `api_key`, `max_retries`); API key
+      via env / gitignored `.env`; SDK retry/backoff. Network I/O isolated in `identify`; request
+      build + response parse are pure functions.
+- [x] CLI: `pack-miner identify --image <png> [--source --model --effort]` runs Tier 1 on one frame.
+- [x] Tests (`tests/test_identify.py` + `tests/fixtures/vision_response_sample.json`): pure
+      `parse_detections`/`build_request`/`encode_image`; **recorded fixture replayed through a fake
+      client** (no network, no `vision` extra needed) for `identify` end-to-end; refusal + missing-
+      frame errors; `Identifier` protocol conformance.
 
----
-
-## M4 — Group + attribute
-
-- [ ] `pipeline/group.py` ([5]) — `controlled` → one shot = one pack (confidence 1.0);
-      `uncontrolled` → group consecutive detections into runs of `packSize` / split on scene
-      boundaries; emit `groupingConfidence < 1` and flag.
-- [ ] `pipeline/attribute.py` ([6]) — run template `attribution.rules` (first-match-wins) to tag
-      each card's `assignedSlot`; leftovers fill fixed slots. Validate per-slot counts vs
-      template — **flag mismatches, don't drop**.
-- [ ] Tests: a controlled pack → valid `PackObservation`; a count-mismatch pack → flagged.
-
-**Exit:** controlled clip → Pack Observations passing template validation.
-
----
-
-## M5 — Aggregate + emit  🎯 *vertical slice complete*
-
-- [ ] `pipeline/aggregate.py` ([7]) — tally per-slot outcome **signatures** (§5: rarity + distinguishing
-      conditions), fold identical signatures, normalise to integer `chance` via **largest-remainder**
-      (sum=100 per slot), emit `PackConfig`.
-- [ ] `pipeline/cli.py` — `typer` app wiring [0]→[7]: `pack-miner run --catalog --manifest
-      --template --out`.
-- [ ] Tests: a **golden** end-to-end fixture (catalog + canned detections + template) → exact
-      expected `config.json`. This is the regression anchor.
-
-**Exit:** one set → Pack Configuration written to `out/`.
+**Exit met:** frames → detections with ids/foil flags via a swappable identifier; ruff + mypy +
+40 pytest green (fixture-driven, offline). Live-clip run is a credentialed manual step (`identify`).
 
 ---
 
-## M6 — Confidence + review
+## M3 — Resolve  ✅ DONE
 
-- [ ] Confidence Report (§3.5): per-outcome 95% CI (Wilson, §6), `status` per slot
-      (`ok`/`needs_more_samples`/`review`), `flags` with "sample N more packs" hints.
-- [ ] Review queue: collect unresolved detections, low-confidence IDs, template-validation
-      failures, under-sampled slots into a single reviewable artifact (CSV/JSON).
-- [ ] Tests: known counts → expected CI half-widths and status transitions at the threshold.
+- [x] `pipeline/resolve.py` ([4]) — `resolve_detection`/`resolve_detections` map each `Detection`
+      → `ResolvedDetection`: (1) exact id hit in `CatalogIndex.byId` (`idMethod="ocr"`); (2) else
+      `rapidfuzz` (`fuzz.WRatio` via `process.extractOne`) name match **constrained to the source's
+      set** (`index.bySet[set_code]`) at/above `score_cutoff` (default 85, `idMethod="name"`,
+      `matchScore` recorded); (3) else unresolved (`cardId=None`, flagged not dropped). A misread id
+      that misses falls through to the name path. rarity/types/races attached from the index; the
+      original `Detection` is kept for foil/confidence/bbox + source/frame.
+- [x] `ResolveStats` (total/resolved/unresolved/`unresolved_rate`) returned alongside the batch —
+      the unresolved rate is measured for QA gating (M6).
+- [x] Tests (`tests/test_resolve.py`): exact-hit (ocr + metadata), fuzzy-hit (typo → name + score),
+      misread-id-falls-through-to-name, unresolved, **set-constraint** (valid name, wrong set →
+      unresolved), `score_cutoff` boundary, and batch unresolved-rate (incl. empty = 0.0).
 
-**Exit:** config emitted **with** confidence report + review queue.
+**Exit met:** detections → `cardId` + metadata via a provider-agnostic resolver; unresolved rate
+measured; ruff + mypy + 48 pytest green.
 
 ---
 
-## M7 — Tier-2 CV fallback  *(only if Tier 1 recall is insufficient)*
+## M4 — Group + attribute  ✅ DONE
 
-> Reference art is available — see **Card-art assets** below. The art downloader (`assets.py`)
-> already lands, so M7 starts from "build the embedding index" rather than "find images".
+- [x] `pipeline/group.py` ([5]) — `group_packs` → `PackGroup`s. `controlled` → one keyframe = one
+      pack (group by `frameOrdinal`, `groupingConfidence` 1.0); `uncontrolled` → consecutive runs
+      of `packSize`, `groupingConfidence` 0.6, every pack flagged + partial-run flag.
+- [x] `pipeline/attribute.py` ([6]) — `attribute_pack` runs `attribution.rules` first-match-wins
+      (`card_matches` predicate: `isFoil`/`anyType`/`anyRace`/`rarityIn`/`cardIdPrefix`, AND); cards
+      matching no rule fall to the fixed slot named for their rarity. Validates per-slot counts vs
+      template — **mismatches flagged, nothing dropped**. Unresolved detections counted, not
+      attributed. Emits a `PackObservation` + flag list.
+- [x] Tests (`tests/test_group.py`, `tests/test_attribute.py`): controlled one-pack-per-frame +
+      uncontrolled chunking/flags; first-match-wins (foil rule beats `rarityIn`), fixed leftover,
+      count-mismatch flagged, unresolved counting, predicate-field matrix.
 
-- [ ] `pipeline/identify/local_cv.py` — card-rectangle detection (`opencv`) + embedding match
-      (CLIP/DINOv2) against catalog art via `faiss` index + OCR. Same `Identifier` interface.
-- [ ] Build/persist the per-set embedding index from downloaded catalog art (`data/art/`).
-- [ ] Tests: messy-frame fixtures where Tier 1 underperforms → improved recall.
+**Exit met:** controlled detections → Pack Observations with per-slot validation; flags surfaced.
 
-**Exit:** local detector+embedder for sources where Tier 1 recall is low.
+---
+
+## M5 — Aggregate + emit  🎯 *vertical slice complete*  ✅ DONE
+
+- [x] `pipeline/aggregate.py` ([7]) — `aggregate` folds observations into a `PackConfig`. Per-card
+      `signature` = rarity + conditions from the slot's `distinguish` types (§5); identical
+      signatures fold; vacuous `equals:false` conditions stripped where a rarity never split;
+      counts → integer `chance` via **largest-remainder** (deterministic tie-break, sums to 100),
+      outcomes emitted most-frequent-first. Carries `SlotTally` forward for confidence. Added an
+      optional `distinguish` field to `SlotDef` (contract + §3.3 doc updated together).
+- [x] `pipeline/run.py` — `detections_to_observations` / `build_outputs` (the offline [4]→[7] +
+      confidence + review tail) and `run_pipeline` ([1]→[7] with the Tier 1 identifier, injectable
+      for Tier 2). `pipeline/cli.py` `run --catalog --manifest --template --out` writes
+      `config.json` / `report.json` / `review.json`.
+- [x] Tests: **golden end-to-end** (`tests/fixtures/golden/` catalog + template + 8 canned packs →
+      exact `config.json`, parsed-JSON equal + contract round-trip + every slot sums to 100), plus
+      `tests/test_aggregate.py` (signature/largest-remainder units).
+
+**Exit met:** one set → Pack Configuration written to `out/`; golden regression anchors the output.
+
+---
+
+## M6 — Confidence + review  ✅ DONE
+
+- [x] `pipeline/confidence.py` — `build_confidence_report`: per-outcome **Wilson** 95% CI
+      half-width (`ci95`, percentage points), per-slot `status` (`ok` / `needs_more_samples` when
+      max CI > 5pp / `review` on a singleton outcome), and "sample ~N more packs" flags derived
+      from the target margin.
+- [x] `pipeline/review.py` — `build_review_queue` collects unresolved detections, low-confidence
+      ids, template-validation failures, and under-sampled slots into one `ReviewItem` list
+      (`review.json`).
+- [x] Tests (`tests/test_confidence.py`, `tests/test_review.py`): Wilson monotonicity + pp scaling,
+      the three status transitions at the thresholds, and review-queue assembly across all kinds.
+
+**Exit met:** config emitted **with** confidence report + review queue.
+
+---
+
+## M7 — Tier-2 CV fallback  ✅ DONE  *(Tier 1 recall measured insufficient on uncontrolled footage)*
+
+> **Why triggered:** on a real uncontrolled JRV box-opening, Tier 1 recall was measured at ~21%
+> (Opus, honest nulls) and Sonnet hallucinated ids (`JRV-001` everywhere). Tier 2 fixes both.
+
+- [x] `pipeline/identify/local_cv.py` — `LocalCVIdentifier` behind `Identifier`. **ORB** keypoint
+      descriptors → **FAISS binary (Hamming) index** over reference art; identify by descriptor
+      **voting** (nearest within `max_hamming`, card with most votes ≥ `min_votes` wins, confidence
+      scales from the threshold). `detect_card_regions` does opencv contour/quad detection + perspective
+      warp, with a whole-frame fallback. Emits `Detection(idMethod="embedding")`; **hallucination is
+      structurally impossible** (only indexed ids can be output). Chose ORB+FAISS over CLIP/DINOv2 to
+      stay within the `cv` extra — no multi-GB model download. `cv2`/`faiss`/`numpy` lazy-imported.
+- [x] `build_art_index` (from the fetch-art manifest, per-set) + `save_art_index`/`load_art_index`
+      (FAISS + labels). `Detection.idMethod` added; resolve honours `"embedding"` on exact hits.
+- [x] CLI: `build-art-index`, `identify-cv`, and `run --tier cv --art-root` (Tier 1↔Tier 2 is a flag).
+- [x] Tests (`tests/test_local_cv.py`, `importorskip`-guarded): synthetic textured cards → index →
+      **warped+noised query matches the right id**, unrelated rejected, region detection + fallback,
+      save/load round-trip, `embedding` Detection + protocol conformance. Plus a resolve test.
+
+**Exit met (verified on real footage):** Tier 2 resolved **10/10 detections** to real JRV cards on the
+pilot frames (vs Tier 1's 21% / hallucinations) and produced a full `config.json` over all 848 frames
+in **16 s at $0** — reading cards (`JRV-062J`, `JRV-004`, `JRV-070`) whose printed id Tier 1 couldn't.
+
+### Post-M7: Tier 2 promoted to primary + god-pack handling
+
+- [x] **Tier 2 is the default identifier** (`run --tier cv`, `run_pipeline(tier="cv")`); Tier 1 vision
+      is the optional fallback (`--tier vision`). Confirmed JRV pack structure (N cards first, FOIL
+      slot last) — the template layout already reflects this.
+- [x] **God packs** (domain: a rare all-MR/Ruler/J-Ruler variant whose cards are *monochrome* and
+      have *no reference art*, so Tier 2 cannot art-match them). `Detection.godPack` + `is_monochrome`
+      / `mean_saturation` in `local_cv.py`: a region that fails the art match but reads monochrome is
+      emitted as a god-pack card (`cardId=None`, `godPack=True`) instead of being lost as noise.
+      `build_outputs` splits god-pack detections off **before** resolve (so they don't inflate the
+      unresolved rate), counts them on `PipelineOutputs.god_pack_cards`, and surfaces a `god_pack`
+      review item + a report flag. Tests cover monochrome discrimination, god-pack emission, the
+      disable switch, and the pipeline split. *(On the JRV double-box run: 0 god packs in the sampled
+      keyframes — rare event, none captured — feature verified via unit tests.)*
+
+> **Open follow-up (§12 "non-skeleton pack structures"):** god packs are reported as a separate
+> signal, not yet modeled as a pack-level variant in `PackConfig` (the per-slot shape can't express
+> "X% of packs are an entirely different pack"). The natural full fix is a Tier-1-as-god-pack-fallback
+> hybrid (vision reads the legible printed id on the monochrome cards) + a pack-variant field.
+
+### Post-M7: hybrid foils + uncontrolled-footage quality (driven by the JRV double-box run)
+
+Measured on a real uncontrolled JRV box-opening (cv-only Tier 2 gave a usable but biased config):
+
+- [x] **Hybrid identifier** (`pipeline/identify/hybrid.py`, `--tier hybrid`) — Tier 2 leads; frames it
+      can't match escalate to Tier 1 (defaults to Sonnet/low for cost) which reads name/id **and the
+      foil flag**; god-pack frames are skipped. This populated the previously-empty **FOIL slot**
+      (was empty → `N`-dominant, plausible). ~115 paid calls over 848 frames ≈ $0.70.
+- [x] **Consecutive-dedup** (`resolve.dedupe_consecutive` + `base_card_id`) — collapses a card
+      lingering across keyframes and a double-faced **Ruler/J-Ruler** (front `JRV-062` / back
+      `JRV-062J` share a base id; `J`/`^`/`*` suffixes stripped). Keyed on `(base id, foil)` so a
+      rare and its separate foil in one pack aren't merged. (733 raw → 576 distinct on the run.)
+      Removed the now-wrong Ruler/J-Ruler `distinguish` from the JRV template.
+- [x] **Boundary grouping** (`group._group_by_boundary`) — uncontrolled footage splits on the reveal
+      pattern (a pack ends at its foil, the next opens at the next `N`); falls back to fixed chunks
+      when no foils are present.
+- [x] **Capacity-aware, rarity-ranked attribution** — cards placed rarest-first, each slot filling
+      only to its `count`, so a **guaranteed-R** fixed slot and the variable **RARE** hit each land
+      correctly. JRV template updated to `N×7 + R(fixed) + RARE(lottery) + FOIL(lottery)`.
+- [x] **Observed-outcome floor** (`aggregate._floor_observed`) — a rare-but-real outcome (one XR
+      seen) never rounds to 0%; bumped to ≥1% with points taken from the largest (still sums to 100).
+- [x] **Table-bleed de-biasing** (`aggregate(max_hits_per_card=1)`, `--max-hits`) — in heuristic
+      footage a pulled rare left on the table is re-detected as the "hit" in many later packs; each
+      distinct card counts as a hit at most `max_hits` times per slot (gated on grouping confidence so
+      controlled/golden is never touched). **Dropped the dominant bias: RARE `MR 47% → 19%` (cap 1),
+      `R` now the dominant hit at 52% as expected.** Hybrid detections cached at
+      `data/jrv_hybrid_detections.json` for free re-tuning.
+
+> **Honest state of the JRV config:** the *shape* is now realistic (R-dominant RARE, plausible FOIL),
+> but de-biasing exposed how **thin** the real sample is (RARE ~21–30 genuine hits, FOIL ~5 distinct)
+> — the confidence report correctly flags `needs_more_samples`. Much of the earlier signal was bleed.
+> Remaining levers: better multi-card region detection (Tier 2 yields ~1 card/frame), a Tier1+Tier2
+> per-card hybrid, and ultimately controlled footage for a trustworthy config.
+
+All checks green throughout: ruff + ruff format + mypy + **106 pytest**.
 
 ---
 
