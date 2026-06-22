@@ -1,5 +1,7 @@
 # Pack-Config Miner
 
+Jeremy videos here: https://www.youtube.com/watch?v=QwnkEvkucFc&list=PL-cF_wvuoh_T5Q6dJO3U8INkYKmyUnvsI&index=2
+
 A standalone pipeline that watches trading-card **pack-opening footage**, identifies every
 card pulled, and **derives a probabilistic pack configuration** — the per-slot rarity/type
 distribution for each set — automatically replacing manual tallying.
