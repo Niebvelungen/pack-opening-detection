@@ -43,5 +43,25 @@ def run(
     raise typer.Exit(code=1)
 
 
+@app.command(name="fetch-art")
+def fetch_art_cmd(
+    cache: str = typer.Option(
+        ..., "--cache", help="Image cache JSON (local path or http(s) URL): {cardId: url}."
+    ),
+    out: str = typer.Option("data/art", "--out", help="Art root to download into."),
+    set_code: str | None = typer.Option(
+        None, "--set", help="Only fetch ids starting with '<SET>-'."
+    ),
+    limit: int | None = typer.Option(None, "--limit", help="Cap the number of images fetched."),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Re-download existing files."),
+) -> None:
+    """Download reference card images for Tier 2 / synthetic fixtures (plan.md section 8)."""
+    from .assets import fetch_art, load_image_cache
+
+    image_cache = load_image_cache(cache)
+    manifest = fetch_art(image_cache, out, set_code=set_code, limit=limit, overwrite=overwrite)
+    typer.echo(f"art manifest now has {len(manifest)} entries at {out}")
+
+
 if __name__ == "__main__":
     app()

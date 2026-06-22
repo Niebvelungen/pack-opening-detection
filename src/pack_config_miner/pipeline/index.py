@@ -26,11 +26,12 @@ def load_catalog(path: str | Path) -> Catalog:
     return _CATALOG_ADAPTER.validate_python(raw)
 
 
-def build_index(catalog: Catalog) -> CatalogIndex:
+def build_index(catalog: Catalog, image_cache: dict[str, str] | None = None) -> CatalogIndex:
     """Flatten a validated catalog into a :class:`CatalogIndex`.
 
     Builds ``byId`` (collector id -> card metadata), ``bySet`` (ordered ids per set),
     ``raritiesBySet`` (per-set rarity counts), and ``typesBySet`` (per-set distinct types).
+    If an ``image_cache`` (``{cardId: url}``) is supplied, each card's ``imageUrl`` is filled in.
     """
     index = CatalogIndex()
     for game in catalog.values():
@@ -49,6 +50,7 @@ def build_index(catalog: Catalog) -> CatalogIndex:
                         types=card.type,
                         races=card.race,
                         colours=card.colour,
+                        imageUrl=image_cache.get(card.id) if image_cache else None,
                     )
                     ids.append(card.id)
                     rarities[card.rarity] = rarities.get(card.rarity, 0) + 1

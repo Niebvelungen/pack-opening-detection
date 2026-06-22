@@ -84,6 +84,7 @@ class IndexedCard(BaseModel):
     types: list[str] = Field(default_factory=list)
     races: list[str] = Field(default_factory=list)
     colours: list[str] = Field(default_factory=list)
+    imageUrl: str | None = None  # reference art URL, when an image cache is supplied (section 8)
 
 
 class CatalogIndex(BaseModel):

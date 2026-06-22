@@ -143,20 +143,42 @@ ruff + mypy + 11 pytest all green.
 
 ## M7 — Tier-2 CV fallback  *(only if Tier 1 recall is insufficient)*
 
+> Reference art is available — see **Card-art assets** below. The art downloader (`assets.py`)
+> already lands, so M7 starts from "build the embedding index" rather than "find images".
+
 - [ ] `pipeline/identify/local_cv.py` — card-rectangle detection (`opencv`) + embedding match
       (CLIP/DINOv2) against catalog art via `faiss` index + OCR. Same `Identifier` interface.
-- [ ] Build/persist the per-set embedding index from catalog art.
+- [ ] Build/persist the per-set embedding index from downloaded catalog art (`data/art/`).
 - [ ] Tests: messy-frame fixtures where Tier 1 underperforms → improved recall.
 
 **Exit:** local detector+embedder for sources where Tier 1 recall is low.
 
 ---
 
+## Card-art assets  ✅ available
+
+Reference card images are available as a flat `{cardId: url}` map (Force of Will), keyed by the
+same collector id as the catalog:
+`https://raw.githubusercontent.com/Niebvelungen/TCG-Arena-FoW/refs/heads/main/image_cache.json`
+(7,247 cards, 117 sets, hosted on `fowsim.s3.amazonaws.com`; the printed `SET-NUMBER` id is
+legible on the scans, confirming the Tier 1 OCR premise).
+
+- [x] `assets.py` — `load_image_cache` (local path or URL), `select_ids` (by set / limit),
+      `fetch_art` (cache, skip-existing, polite delay, writes an id→filename `manifest.json`).
+- [x] `pack-miner fetch-art --cache <path|url> [--set CMF] [--limit N] [--out data/art]` CLI.
+- [x] `IndexedCard.imageUrl` + optional `image_cache` arg to `build_index` (fills `imageUrl`).
+- [ ] **Use now (M1–M5):** composite downloaded art into synthetic "controlled capture" frames
+      as deterministic fixtures, so the vertical slice is testable before real footage exists.
+- [ ] **Use later (M7):** build the per-set CLIP/DINOv2 + `faiss` embedding index from `data/art/`.
+
+Bulk download (all ~7k images) is a single `fetch-art` invocation but is **deferred** — only a
+small per-set sample is fetched as needed (art and `image_cache.json` live under gitignored `data/`).
+
 ## Cross-cutting
 
 - **Fixtures:** keep a tiny sample catalog, a short clip, canned detection responses, and at
   least one golden config under `tests/fixtures/`. The golden config (M5) guards the output
-  contract on every change.
+  contract on every change. Card-art-derived synthetic frames supplement these (see above).
 - **Validation everywhere:** every stage boundary parses/serializes through its `pydantic`
   contract.
 - **Open questions** ([plan.md](plan.md) §12) to resolve as we hit them: foil detectability,

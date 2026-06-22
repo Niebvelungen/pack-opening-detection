@@ -39,6 +39,15 @@ The Pack Configuration is consumed by an external simulator with specific rules 
 - `chance` values are integers; each lottery slot's outcomes sum to **exactly 100**
   (largest-remainder rounding).
 
+## Card-art assets
+
+Reference card images (Force of Will) are a flat `{cardId: url}` map keyed by collector id:
+`https://raw.githubusercontent.com/Niebvelungen/TCG-Arena-FoW/refs/heads/main/image_cache.json`.
+Download via `pack-miner fetch-art --cache <path|url> [--set CMF] [--limit N]` (module:
+`assets.py`). Art + `image_cache.json` live under gitignored `data/`. Used for the Tier 2
+embedding index (M7) and for compositing synthetic test frames for the vertical slice (M1–M5).
+The printed `SET-NUMBER` id is legible on the scans (Tier 1 OCR premise holds).
+
 ## Catalog parsing gotchas
 
 - `id` format is `SET-NUMBER` (e.g. `CMF-001`); suffixes possible (`J`, `^`, `*`).
