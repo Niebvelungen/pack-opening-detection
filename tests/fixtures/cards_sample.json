@@ -1,0 +1,62 @@
+{
+  "fow": {
+    "clusters": [
+      {
+        "name": "Grimm",
+        "sets": [
+          {
+            "name": "Crimson Moon's Fairy Tale",
+            "code": "CMF",
+            "cards": [
+              {
+                "id": "CMF-001",
+                "name": "Aesop, the Prince's Tutor",
+                "type": ["Resonator"],
+                "race": ["Human"],
+                "cost": "{W}{1}",
+                "colour": ["W"],
+                "ATK": 500,
+                "DEF": 500,
+                "abilities": ["..."],
+                "divinity": "",
+                "flavour": "...",
+                "artists": [],
+                "rarity": "U"
+              },
+              {
+                "id": "CMF-002",
+                "name": "Wonder Stone",
+                "type": ["Magic Stone"],
+                "race": [],
+                "cost": "",
+                "colour": ["W"],
+                "ATK": "",
+                "DEF": "",
+                "abilities": [],
+                "divinity": "",
+                "flavour": "",
+                "artists": [],
+                "rarity": "C"
+              },
+              {
+                "id": "CMF-003",
+                "name": "Little Red, the Pure Stone",
+                "type": ["Ruler"],
+                "race": ["Human"],
+                "cost": "",
+                "colour": ["R"],
+                "ATK": "",
+                "DEF": "",
+                "abilities": [],
+                "divinity": "",
+                "flavour": "",
+                "artists": [],
+                "rarity": "SR"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

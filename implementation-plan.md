@@ -30,29 +30,32 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done.
 
 ---
 
-## M0 — Contracts + catalog index
+## M0 — Contracts + catalog index  ✅ DONE
 
 Build every §3 schema as a validated `pydantic` v2 model. These are the spine; everything else
 depends on them.
 
-- [ ] `contracts/catalog.py` — `CatalogCard` (note: `ATK`/`DEF` accept `int | ""`; `type`/`race`/
-      `colour` are `list[str]`), `CatalogSet`, `CatalogCluster`, root model. Validator that
-      tolerates the `""`-as-null numeric quirk.
-- [ ] `contracts/manifest.py` — `FootageSource` (`capture: Literal["controlled","uncontrolled"]`),
+- [x] `contracts/catalog.py` — `CatalogCard` (`ATK`/`DEF` accept `int | ""`, normalised to
+      `int | None`; `type`/`race`/`colour` are `list[str]`; `extra="allow"` keeps passthrough
+      fields), `CatalogSet`, `CatalogCluster`, `CatalogGame`, `Catalog` root, plus `IndexedCard`
+      and `CatalogIndex`.
+- [x] `contracts/manifest.py` — `FootageSource` (`capture: Literal["controlled","uncontrolled"]`),
       `Manifest`.
-- [ ] `contracts/template.py` — `SlotDef` (`kind: Literal["fixed","lottery"]`), `AttributionRule`
-      with a `match` predicate (`isFoil` / `anyType` / `rarityIn` / `raceIn` / `cardIdPrefix`),
-      `PackTemplate`.
-- [ ] `contracts/observation.py` — `IdentifiedCard` (`idMethod: Literal["ocr","name","embedding"]`),
+- [x] `contracts/template.py` — `SlotDef` (`kind: Literal["fixed","lottery"]`), `MatchPredicate`
+      (`isFoil`/`anyType`/`anyRace`/`rarityIn`/`cardIdPrefix`), `AttributionRule`, `PackTemplate`
+      (with `lottery_slots()`/`fixed_slots()` helpers).
+- [x] `contracts/observation.py` — `IdentifiedCard` (`idMethod: Literal["ocr","name","embedding"]`),
       `PackObservation`.
-- [ ] `contracts/pack_config.py` — `Condition`, `Outcome`, `PackConfig`, `ConfidenceReport`.
-      **Preserve the `"rarity": <slotName>` quirk** in `excludes` / `set_override` serialization.
-- [ ] `pipeline/index.py` ([0]) — load catalog → `CatalogIndex` (`byId`, `bySet`,
-      `raritiesBySet`, `typesBySet`). Validate.
-- [ ] Tests: round-trip every model; load a small fixture catalog → assert index shape;
-      assert `ATK:""` and `ATK:500` both parse.
+- [x] `contracts/pack_config.py` — `Condition`, `Outcome`, `ExcludeEntry`, `SetOverrideEntry`,
+      `PackConfig` (+ `to_config_dict`/`from_config_dict` for the lottery-slots-as-top-level-keys
+      shape), `ConfidenceReport`. **`"rarity": <slotName>` quirk preserved** + round-trip tested.
+- [x] `pipeline/index.py` ([0]) — `load_catalog`/`build_index`/`load_index` → `CatalogIndex`
+      (`byId`, `bySet`, `raritiesBySet`, `typesBySet`).
+- [x] Tests (`tests/test_contracts.py` + `tests/fixtures/cards_sample.json`): `ATK:""` and
+      `ATK:500` both parse; index shape; template partitioning; PackConfig quirk round-trip.
 
-**Exit:** all §3 schemas validate; sample `cards.json` loads to a correct `CatalogIndex`.
+**Exit met:** all §3 schemas validate; sample `cards.json` loads to a correct `CatalogIndex`;
+ruff + mypy + 11 pytest all green.
 
 ---
 
